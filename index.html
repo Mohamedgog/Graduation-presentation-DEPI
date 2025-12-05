@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>End-to-End QA Project</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        /* --- 1. CORE THEME & RESET --- */
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.6); /* Slightly more transparent for cleaner look */
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1; /* Made slightly brighter for better readability */
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-purple: #a78bfa;
+            --accent-pink: #f472b6;
+            --border: rgba(148, 163, 184, 0.25);
+            --sidebar-width: 280px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* --- 2. BACKGROUND CANVAS --- */
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
+        }
+
+        /* --- 3. MAIN SCROLL CONTAINER --- */
+        main {
+            height: 100vh;
+            width: 100vw;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            display: flex;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- SECTION (SLIDE) STYLING --- */
+        section {
+            height: 100vh;
+            min-width: 100vw;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            padding: 4vh 5vw; /* Increased horizontal padding slightly */
+        }
+
+        /* --- 4. CONTENT STYLING --- */
+        .content-wrapper {
+            z-index: 2;
+            max-width: 1500px; /* Wider container for laptop screenshots */
+            width: 100%;
+            max-height: 94vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Typography Improvements */
+        h1 {
+            font-size: clamp(2.5rem, 6vh, 4.5rem);
+            font-weight: 800;
+            margin-bottom: 3vh;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-emerald));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-align: center;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: clamp(1.8rem, 4vh, 2.8rem);
+            margin-bottom: 3vh;
+            border-left: 6px solid var(--accent-cyan);
+            padding-left: 20px;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(34, 211, 238, 0.2);
+        }
+
+        h3 { color: var(--accent-cyan); margin-bottom: 1vh; font-size: clamp(1.1rem, 2.2vh, 1.5rem); font-weight: 600; }
+        h4 { color: var(--accent-emerald); margin: 0.8vh 0; font-size: clamp(0.95rem, 1.8vh, 1.2rem); }
+
+        p, li {
+            font-size: clamp(0.85rem, 1.6vh, 1.05rem);
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        /* Grid Layouts - Optimized for widescreen content */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3vw; /* Increased gap */
+            align-items: stretch;
+        }
+
+        /* Special grid for slides with big images */
+        .grid-split-img {
+            display: grid;
+            grid-template-columns: 45% 55%; /* More space for the image side */
+            gap: 3vw;
+            align-items: center;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2vw;
+        }
+
+        @media (max-width: 1100px) {
+            .grid-2, .grid-split-img { grid-template-columns: 1fr; gap: 20px; }
+            .grid-4 { grid-template-columns: 1fr 1fr; }
+            section { overflow-y: auto; display: block; padding-top: 80px; }
+            .content-wrapper { display: block; max-height: none; }
+        }
+
+        /* Enhanced Glass Card */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px; /* Softer corners */
+            padding: 3vh 2vw; /* Better internal spacing */
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            height: 100%;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            background: rgba(40, 55, 75, 0.7);
+            box-shadow: 0 20px 50px -12px rgba(34, 211, 238, 0.15);
+        }
+
+        .glass-card i { margin-bottom: 1.5vh; }
+
+        /* Buttons */
+        .btn-group { display: flex; gap: 12px; margin-top: 2vh; flex-wrap: wrap; justify-content: flex-start; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px;
+            border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.3s ease;
+            cursor: pointer; background: rgba(15, 23, 42, 0.8); color: var(--accent-cyan);
+            border: 1px solid var(--border); font-size: 0.9rem;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .btn:hover { background: var(--accent-cyan); color: #0f172a; border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(34, 211, 238, 0.4); }
+
+        .btn.secondary { color: var(--accent-emerald); }
+        .btn.secondary:hover { background: var(--accent-emerald); color: #0f172a; border-color: var(--accent-emerald); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+
+        .btn.jira { color: #60a5fa; }
+        .btn.jira:hover { background: #60a5fa; color: #fff; border-color: #60a5fa; box-shadow: 0 0 20px rgba(96, 165, 250, 0.4); }
+
+        .btn.doc { color: var(--accent-pink); }
+        .btn.doc:hover { background: var(--accent-pink); color: #fff; border-color: var(--accent-pink); box-shadow: 0 0 20px rgba(244, 114, 182, 0.4); }
+
+        .check-list { list-style: none; padding: 0; margin-top: 1vh; text-align: left; }
+        .check-list li { position: relative; padding-left: 28px; margin-bottom: 1vh; }
+        .check-list li::before {
+            content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            color: var(--accent-emerald); position: absolute; left: 0; top: 4px; font-size: 0.9rem;
+        }
+
+        /* --- PDF/IMAGE MODAL --- */
+        #pdfOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column;
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        }
+        #pdfOverlay.show { opacity: 1; pointer-events: all; }
+
+        .pdf-container {
+            width: 90%; height: 90%;
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .pdf-header { padding: 15px 25px; background: #0f172a; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .pdf-title { color: var(--text-main); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+        .close-hint { color: var(--accent-cyan); font-size: 0.9rem; font-family: 'JetBrains Mono', monospace; }
+        #pdfContent { width: 100%; height: 100%; border: none; background: #fff; }
+
+        /* --- NAVIGATION --- */
+        .nav-controls { position: fixed; bottom: 30px; right: 30px; z-index: 100; display: flex; gap: 20px; }
+        .nav-btn {
+            width: 50px; height: 50px; border-radius: 50%; background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--border); color: var(--text-main); display: flex;
+            align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
+            backdrop-filter: blur(8px);
+        }
+        .nav-btn:hover { background: var(--accent-cyan); color: #000; transform: scale(1.1); box-shadow: 0 0 15px var(--accent-cyan); }
+
+        .burger-btn {
+            position: fixed; top: 30px; left: 30px; z-index: 200; background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--border); width: 45px; height: 45px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff;
+            backdrop-filter: blur(8px);
+        }
+        .ppt-sidebar {
+            position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh;
+            background: #0b1120; border-right: 1px solid var(--border); z-index: 150;
+            transform: translateX(-100%); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; padding: 100px 20px 30px;
+        }
+        .ppt-sidebar.active { transform: translateX(0); }
+        .slide-thumb { display: flex; gap: 12px; margin-bottom: 15px; cursor: pointer; opacity: 0.6; align-items: center; transition: 0.2s; }
+        .slide-thumb.active, .slide-thumb:hover { opacity: 1; }
+        .thumb-preview {
+            flex: 1; height: 36px; background: rgba(255,255,255,0.05); border-radius: 6px;
+            display: flex; align-items: center; padding-left: 12px; font-size: 0.8rem; font-weight: 600;
+            border: 1px solid transparent; transition: 0.3s;
+        }
+        .slide-thumb.active .thumb-preview { border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(34, 211, 238, 0.1); }
+
+        /* --- UPDATED IMAGE PLACEHOLDER FOR LAPTOP SCREENSHOTS --- */
+        .img-placeholder {
+            width: 100%;
+            /* Aspect ratio approx 16:9 for laptop screens */
+            aspect-ratio: 16 / 9;
+            /* Adjust height logic to be flexible but bounded */
+            height: auto;
+            max-height: 40vh;
+            background: #000;
+            border-radius: 12px;
+            margin: 1.5vh 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+        .img-placeholder:hover { border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+
+        /* Ensure image fills the container correctly */
+        .img-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Shows full screenshot without cropping */
+            background-color: #1e293b; /* Dark bg for empty space if ratio differs */
+        }
+
+        /* Helper for Full-Image Cards */
+        .full-img-card { padding: 0 !important; overflow: hidden; background: transparent; border: none; box-shadow: none; }
+        .full-img-card .img-placeholder { margin: 0; max-height: 60vh; border-radius: 20px; border: 1px solid var(--border); }
+
+        .anim-hidden { opacity: 0; }
+
+    </style>
+</head>
+<body>
+
+<!-- INTERACTIVE BACKGROUND -->
+<canvas id="particle-canvas"></canvas>
+<div class="burger-btn" id="menuToggle"><i class="fa-solid fa-bars"></i></div>
+
+<!-- PDF/IMAGE OVERLAY MODAL -->
+<div id="pdfOverlay">
+    <div class="pdf-container">
+        <div class="pdf-header">
+            <span class="pdf-title"><i class="fa-solid fa-expand"></i> Preview</span>
+            <span class="close-hint">Press <strong>ENTER</strong> to close <i class="fa-solid fa-xmark"></i></span>
+        </div>
+        <iframe id="pdfContent" src=""></iframe>
+    </div>
+</div>
+
+<nav class="ppt-sidebar" id="sidebar">
+    <!-- JS populates -->
+</nav>
+
+<main id="mainScroller">
+
+    <!-- Slide 1: Introduction -->
+    <section id="slide0">
+        <div class="content-wrapper" style="text-align: center;">
+            <h1 class="anim-hidden" data-anim="backInDown">End-to-End QA Project</h1>
+
+            <div class="anim-hidden" data-anim="fadeInUp" style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin: 4vh 0;">
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Menna Khaled</span>
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Mohamed Araby</span>
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Lana Eltambouly</span>
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Nasser Mohamed</span>
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Sama Ahmed</span>
+                <span class="btn" style="border-radius:20px; pointer-events:none; font-size:0.9rem; padding: 8px 16px;">Marsilino</span>
+            </div>
+
+            <div class="glass-card anim-hidden" data-anim="zoomInUp" style="display:inline-block; text-align:left; min-width: 500px; margin-top: 4vh; align-self: center;">
+                <h3 style="color:var(--accent-cyan); margin:0 0 15px 0; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Project Scope</h3>
+                <div style="display: flex; justify-content: space-around;">
+                    <ul class="check-list">
+                        <li>OpenCart (Manual + Database)</li>
+                        <li>Automation Exercise (API)</li>
+                    </ul>
+                    <ul class="check-list">
+                        <li>DemoBlaze (Automation Framework)</li>
+                        <li>Jira Management</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 2: Test Objectives -->
+    <section id="slide1">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInRight">Test Objectives</h2>
+            <div class="grid-4">
+                <div class="glass-card anim-hidden" data-anim="fadeInUp" style="animation-delay:0.1s">
+                    <i class="fa-solid fa-check-double" style="font-size:2.5rem; color:var(--accent-cyan);"></i>
+                    <h4>1. Functional</h4>
+                    <p>Ensuring all major features behave as expected.</p>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="fadeInUp" style="animation-delay:0.2s">
+                    <i class="fa-solid fa-tachograph-digital" style="font-size:2.5rem; color:var(--accent-pink);"></i>
+                    <h4>2. Usability</h4>
+                    <p>Checking UX & basic responsiveness.</p>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="fadeInUp" style="animation-delay:0.3s">
+                    <i class="fa-solid fa-cubes-stacked" style="font-size:2.5rem; color:var(--accent-purple);"></i>
+                    <h4>3. Integration</h4>
+                    <p>Combining manual, API, DB, and automation.</p>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="fadeInUp" style="animation-delay:0.4s">
+                    <i class="fa-solid fa-infinity" style="font-size:2.5rem; color:var(--accent-emerald);"></i>
+                    <h4>4. End-to-End</h4>
+                    <p>User journey → Logic → Data → Regression.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3: Project Summary -->
+    <section id="slide2">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInLeft">Project Summary</h2>
+            <div class="grid-4">
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.1s">
+                    <i class="fa-solid fa-hand-pointer fa-2x" style="color:var(--accent-cyan)"></i>
+                    <h3>Manual</h3>
+                    <p><strong>OpenCart</strong></p>
+                    <ul class="check-list">
+                        <li>Home & Admin</li>
+                        <li>Test Cases</li>
+                        <li>Bug Reports</li>
+                    </ul>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.2s">
+                    <i class="fa-solid fa-database fa-2x" style="color:var(--accent-purple)"></i>
+                    <h3>Database</h3>
+                    <p><strong>MySQL</strong></p>
+                    <ul class="check-list">
+                        <li>Data Validation</li>
+                        <li>Schema Check</li>
+                        <li>Integrity</li>
+                    </ul>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.3s">
+                    <i class="fa-solid fa-globe fa-2x" style="color:var(--accent-pink)"></i>
+                    <h3>API</h3>
+                    <p><strong>Auto Exercise</strong></p>
+                    <ul class="check-list">
+                        <li>20+ Endpoints</li>
+                        <li>Postman</li>
+                        <li>Status Codes</li>
+                    </ul>
+                </div>
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.4s">
+                    <i class="fa-brands fa-java fa-2x" style="color:var(--accent-emerald)"></i>
+                    <h3>Automation</h3>
+                    <p><strong>DemoBlaze</strong></p>
+                    <ul class="check-list">
+                        <li>Selenium</li>
+                        <li>TestNG</li>
+                        <li>Cucumber BDD</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4: Test Plan Overview -->
+    <section id="slide3">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInDown">Test Plan Overview</h2>
+            <div class="grid-2">
+                <div class="glass-card anim-hidden" data-anim="fadeInLeft">
+                    <h3><i class="fa-solid fa-chess-knight"></i> Core Strategy</h3>
+                    <ul class="check-list">
+                        <li><strong>Manual:</strong> Primary testing method.</li>
+                        <li><strong>Automation:</strong> Critical Regression.</li>
+                        <li><strong>API & DB:</strong> Backend validation.</li>
+                        <li><strong>Management:</strong> Jira.</li>
+                    </ul>
+                    <h3 style="margin-top:3vh;"><i class="fa-solid fa-bullseye"></i> Scope</h3>
+                    <p>Homepage + Admin + API + DB + DemoBlaze flows.</p>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="fadeInRight">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div>
+                            <h4 style="color:var(--accent-cyan)">Entry Criteria</h4>
+                            <p>Stable env, Data ready, TC reviewed.</p>
+                        </div>
+                        <div>
+                            <h4 style="color:var(--accent-cyan)">Exit Criteria</h4>
+                            <p>100% Executed, 95%+ Pass.</p>
+                        </div>
+                    </div>
+                    <div style="margin-top:3vh;">
+                        <h3 style="color:var(--accent-purple);"><i class="fa-regular fa-calendar-check"></i> Schedule</h3>
+                        <p>Plan(4d) → Design(4d) → Exec(10d) → Auto(5d) → Close(3d)</p>
+                    </div>
+                    <div style="margin-top:auto; text-align:right;">
+                        <a href="https://docs.google.com/document/d/1VBLcbC8zxfNRhXBTYnAwY6-BleU3mfLB/edit?rtpof=true" target="_blank" class="btn">
+                            <i class="fa-solid fa-file-lines"></i> Open Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 5: Manual Testing (Updated Layout) -->
+    <section id="slide4">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInLeft">Manual Testing (OpenCart)</h2>
+            <p class="anim-hidden" data-anim="fadeIn" style="text-align:center; margin-bottom:2vh;">Outcome: Clear understanding of system behavior & early defect discovery.</p>
+
+            <div class="grid-2">
+                <!-- Homepage Column -->
+                <div class="glass-card anim-hidden" data-anim="fadeInUp">
+                    <h3 style="text-align:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom: 1vh;"><i class="fa-solid fa-shop"></i> Homepage</h3>
+
+                    <div class="img-placeholder" onclick="openPdfModal('img1.png')">
+                        <img src="img1.png" alt="Home Page Screenshot">
+                    </div>
+
+                    <h4>Deliverables:</h4>
+                    <ul class="check-list" style="margin-bottom: auto;">
+                        <li>Positive + Negative + Edge cases</li>
+                        <li>Validated functional flows</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://docs.google.com/spreadsheets/d/1-oDHb-m4DFWmLVrFwe8ityHFGp8U_AD1/edit" target="_blank" class="btn">TC_Home</a>
+                        <a href="https://docs.google.com/spreadsheets/d/19qoyA_ay2TZPl7jEKw8NZqWZ84vK5p11/edit" target="_blank" class="btn secondary">Bug_Home</a>
+                    </div>
+                </div>
+
+                <!-- Admin Column -->
+                <div class="glass-card anim-hidden" data-anim="fadeInUp" style="animation-delay:0.2s">
+                    <h3 style="text-align:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom: 1vh;"><i class="fa-solid fa-user-shield"></i> Admin Panel</h3>
+
+                    <div class="img-placeholder" onclick="openPdfModal('img_admin_placeholder.png')">
+                        <img src="img_admin_placeholder.png" alt="Admin Panel Screenshot">
+                    </div>
+
+                    <h4>Deliverables:</h4>
+                    <ul class="check-list" style="margin-bottom: auto;">
+                        <li>150+ Test Cases Total</li>
+                        <li>2 Major Bug Reports with evidence</li>
+                    </ul>
+                    <div class="btn-group">
+                        <a href="https://docs.google.com/spreadsheets/d/1fxddgVk5Hq2K5gTHVZW2o5hi9QEznJuw/edit" target="_blank" class="btn">TC_Admin</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1-c7rV98xdRJKb-GClPv8fl51BUx8vDNm/edit" target="_blank" class="btn secondary">Bug_Admin</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 6: Jira (Updated for Screenshot) -->
+    <section id="slide5">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInRight">Test Management (Jira)</h2>
+            <div class="grid-split-img">
+                <div class="glass-card anim-hidden" data-anim="fadeInLeft">
+                    <h3>Structure Implemented</h3>
+                    <ul class="check-list">
+                        <li><strong>Epics:</strong> Feature groups</li>
+                        <li><strong>User Stories:</strong> Requirements</li>
+                        <li><strong>Test Cases:</strong> Direct mapping</li>
+                        <li><strong>Bugs:</strong> Linked to failures</li>
+                    </ul>
+                    <h3 style="margin-top:3vh; color:var(--accent-purple);">Value</h3>
+                    <p>Full traceability: Epic → Story → TC → Bug.</p>
+                    <div style="text-align:left; margin-top:3vh;">
+                        <a href="https://team1mlsn.atlassian.net/jira/software/c/projects/OC/boards/34/backlog" target="_blank" class="btn jira">
+                            <i class="fa-brands fa-jira"></i> View Jira Project
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Full Image Card -->
+                <div class="glass-card full-img-card anim-hidden" data-anim="fadeInRight">
+                    <div class="img-placeholder" style="max-height: 50vh;" onclick="openPdfModal('img2.png')">
+                        <img src="img2.png" alt="Jira Board Screenshot">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 7: API (Updated for Screenshot) -->
+    <section id="slide6">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInUp">API Testing (Auto Exercise)</h2>
+            <div class="grid-split-img">
+                <div class="glass-card anim-hidden" data-anim="fadeInLeft">
+                    <h3><i class="fa-solid fa-server"></i> Details</h3>
+                    <ul class="check-list">
+                        <li><strong>Tool:</strong> Postman</li>
+                        <li><strong>Scope:</strong> 20+ critical endpoints</li>
+                        <li><strong>Goal:</strong> Backend logic validated.</li>
+                    </ul>
+                    <h3 style="margin-top:3vh; color:var(--accent-emerald);">Validations</h3>
+                    <ul class="check-list">
+                        <li>Status Codes (200, 201, 400)</li>
+                        <li>Response Schema</li>
+                        <li>Data Accuracy & Time</li>
+                    </ul>
+                    <div style="margin-top:3vh;">
+                        <a href="https://docs.google.com/spreadsheets/d/1y6btca_3G9bgi5WM_1VU4Q5Hj6jrt4MA/edit" target="_blank" class="btn secondary">
+                            <i class="fa-solid fa-file-excel"></i> View API Sheet
+                        </a>
+                    </div>
+                </div>
+
+                <div class="glass-card full-img-card anim-hidden" data-anim="fadeInRight">
+                    <div class="img-placeholder" style="max-height: 50vh;" onclick="openPdfModal('img3.png')">
+                        <img src="img3.png" alt="Postman Interface Screenshot">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 8: DB (Updated for Screenshot) -->
+    <section id="slide7">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInLeft">Database Testing (MySQL)</h2>
+            <div class="grid-split-img">
+                <div class="glass-card full-img-card anim-hidden" data-anim="rotateInDownLeft">
+                    <div class="img-placeholder" style="max-height: 50vh;" onclick="openPdfModal('img4.png')">
+                        <img src="img4.png" alt="SQL Queries Screenshot">
+                    </div>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="rotateInDownRight">
+                    <h3>Focus Areas</h3>
+                    <ul class="check-list">
+                        <li>CRUD verification</li>
+                        <li>Data consistency checks</li>
+                        <li>Foreign key integrity</li>
+                        <li>Calculations (prices)</li>
+                        <li>Schema compliance</li>
+                    </ul>
+                    <h3 style="margin-top:3vh; color:var(--accent-emerald);">Deliverables</h3>
+                    <p>50+ test queries documented.</p>
+                    <div style="margin-top:3vh;">
+                        <a href="https://docs.google.com/spreadsheets/d/13ujhjKHVmk9PNSJIw5thRxNZ9D9uQdan/edit" target="_blank" class="btn">
+                            <i class="fa-solid fa-database"></i> DB Test Sheet
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 9: TestNG Framework (Updated for Screenshot) -->
+    <section id="slide8">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="zoomIn">TestNG Framework – DemoBlaze</h2>
+            <p class="anim-hidden" data-anim="fadeIn" style="text-align:center; margin-bottom:2vh; font-size:1.1rem; color:var(--accent-purple);">Page Object Model (POM) Architecture</p>
+
+            <div class="grid-split-img">
+                <div class="glass-card anim-hidden" data-anim="fadeInRight">
+                    <h3>Highlights</h3>
+                    <ul class="check-list">
+                        <li><strong>Modular:</strong> Separation of Objects/Tests.</li>
+                        <li><strong>Maintainable:</strong> Easy to update locators.</li>
+                        <li><strong>Reusable:</strong> Shared utilities.</li>
+                    </ul>
+                    <div style="margin-top:3vh; padding:20px; border:2px dashed var(--accent-cyan); border-radius:15px; text-align:center; cursor:pointer; transition:0.3s; background: rgba(34, 211, 238, 0.05);"
+                         onclick="openPdfModal('UML_TestNG.pdf')"
+                         onmouseover="this.style.background='rgba(34, 211, 238, 0.15)'"
+                         onmouseout="this.style.background='rgba(34, 211, 238, 0.05)'">
+                        <i class="fa-solid fa-sitemap" style="font-size:2.5rem; color:var(--accent-cyan); margin-bottom:10px;"></i>
+                        <h4 style="color:var(--text-main); margin:0;">Open Architecture UML</h4>
+                    </div>
+                </div>
+
+                <div class="glass-card full-img-card anim-hidden" data-anim="fadeInLeft">
+                    <div class="img-placeholder" style="max-height: 50vh;" onclick="openPdfModal('img5.png')">
+                        <img src="img5.png" alt="Project Structure Screenshot">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 10: Cucumber BDD -->
+    <section id="slide9">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="backInUp">Cucumber BDD Structure</h2>
+            <div style="display:flex; justify-content:center; gap:60px; margin-bottom:4vh;" class="anim-hidden" data-anim="fadeIn">
+                <div style="text-align:center;">
+                    <i class="fa-solid fa-leaf" style="font-size:4rem; color:#10b981; margin-bottom: 10px;"></i>
+                    <p style="font-weight:bold; font-size: 1.2rem;">BDD</p>
+                </div>
+                <div style="text-align:center;">
+                    <i class="fa-solid fa-file-invoice" style="font-size:4rem; color:#fbbf24; margin-bottom: 10px;"></i>
+                    <p style="font-weight:bold; font-size: 1.2rem;">Reports</p>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="glass-card anim-hidden" data-anim="fadeInLeft">
+                    <h3><i class="fa-solid fa-list"></i> Components</h3>
+                    <ul class="check-list">
+                        <li><strong>Features (Gherkin):</strong> Given–When–Then.</li>
+                        <li><strong>Step Definition:</strong> Java methods.</li>
+                    </ul>
+                    <div style="margin-top:auto;">
+                        <a href="https://docs.google.com/document/d/1cWdJkGzYmG6syP9tQGleO5yUUWlYm4Qu/edit" target="_blank" class="btn doc" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-file-word"></i> Open BDD Doc
+                        </a>
+                    </div>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="fadeInRight">
+                    <h3><i class="fa-solid fa-gears"></i> Execution</h3>
+                    <ul class="check-list">
+                        <li><strong>Hooks:</strong> Setup/Teardown.</li>
+                        <li><strong>Runner Class:</strong> Steps + Hooks.</li>
+                    </ul>
+                    <div style="margin-top:auto;">
+                        <a href="cucumber-html-report.html" target="_self" class="btn secondary" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-chart-pie"></i> View Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 11: Team Roles -->
+    <section id="slide10">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="flipInX">Team Roles</h2>
+            <div class="grid-4">
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.1s; text-align:center;">
+                    <i class="fa-solid fa-clipboard-check fa-3x" style="color:var(--accent-cyan); margin:0 auto 15px auto;"></i>
+                    <h3>Manual</h3>
+                    <ul style="list-style:none; padding:0; font-size:0.95rem; color:var(--text-muted);">
+                        <li><strong>Admin:</strong></li>
+                        <li>Menna, Mohamed</li>
+                        <li>Lana, Nasser</li>
+                        <li style="margin-top:8px;"><strong>Home:</strong></li>
+                        <li>Sama, Marsilino</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.2s; text-align:center;">
+                    <i class="fa-solid fa-robot fa-3x" style="color:var(--accent-emerald); margin:0 auto 15px auto;"></i>
+                    <h3>Automation</h3>
+                    <ul style="list-style:none; padding:0; font-size:0.95rem; color:var(--text-muted);">
+                        <li>Menna, Mohamed</li>
+                        <li>Lana, Nasser</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.3s; text-align:center;">
+                    <i class="fa-solid fa-server fa-3x" style="color:var(--accent-purple); margin:0 auto 15px auto;"></i>
+                    <h3>API</h3>
+                    <ul style="list-style:none; padding:0; font-size:0.95rem; color:var(--text-muted);">
+                        <li>Menna, Mohamed</li>
+                        <li>Lana, Nasser</li>
+                        <li>Sama</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="zoomIn" style="animation-delay:0.4s; text-align:center;">
+                    <i class="fa-solid fa-database fa-3x" style="color:var(--accent-pink); margin:0 auto 15px auto;"></i>
+                    <h3>Database</h3>
+                    <ul style="list-style:none; padding:0; font-size:0.95rem; color:var(--text-muted);">
+                        <li>Lana, Mohamed</li>
+                        <li>Menna</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 12: References -->
+    <section id="slide11">
+        <div class="content-wrapper">
+            <h2 class="anim-hidden" data-anim="fadeInUp">References</h2>
+            <div class="grid-2">
+                <div class="glass-card anim-hidden" data-anim="fadeInLeft">
+                    <h4>ISTQB Foundation v4.0</h4>
+                    <a href="https://www.istqb.org/downloads/category/49-foundation-level-documents.html" target="_blank" style="color:var(--accent-cyan); word-break:break-all; font-size:0.9rem;">istqb.org/downloads</a>
+
+                    <h4 style="margin-top:3vh;">IEEE Standard (IEEE 829)</h4>
+                    <a href="https://standards.ieee.org/ieee/829/1226/" target="_blank" style="color:var(--accent-cyan); word-break:break-all; font-size:0.9rem;">standards.ieee.org</a>
+
+                    <h4 style="margin-top:3vh;">Jira Docs</h4>
+                    <a href="https://support.atlassian.com/jira-software/" target="_blank" style="color:var(--accent-cyan); word-break:break-all; font-size:0.9rem;">support.atlassian.com</a>
+                </div>
+
+                <div class="glass-card anim-hidden" data-anim="fadeInRight">
+                    <h4>Selenium WebDriver</h4>
+                    <a href="https://www.selenium.dev/documentation/webdriver/" target="_blank" style="color:var(--accent-cyan); word-break:break-all; font-size:0.9rem;">selenium.dev</a>
+
+                    <h4 style="margin-top:3vh;">Postman Guide</h4>
+                    <a href="https://learning.postman.com/" target="_blank" style="color:var(--accent-cyan); word-break:break-all; font-size:0.9rem;">learning.postman.com</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 13: Thank You -->
+    <section id="slide12">
+        <div class="content-wrapper" style="text-align:center;">
+            <h1 class="anim-hidden" data-anim="zoomInDown" style="font-size:clamp(4rem, 10vh, 7rem);">Thank You!</h1>
+            <h2 class="anim-hidden" data-anim="fadeInUp" style="border:none; margin-top:3vh;">Any Questions?</h2>
+            <div class="anim-hidden" data-anim="pulse" style="animation-iteration-count: infinite; margin-top:5vh;">
+                <i class="fa-regular fa-comments fa-5x" style="color:var(--accent-cyan)"></i>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<div class="nav-controls">
+    <div class="nav-btn" id="prevBtn" onclick="prevSlide()"><i class="fa-solid fa-chevron-left"></i></div>
+    <div class="nav-btn" id="nextBtn" onclick="nextSlide()"><i class="fa-solid fa-chevron-right"></i></div>
+</div>
+
+<script>
+    const main = document.getElementById('mainScroller');
+    const sidebar = document.getElementById('sidebar');
+    const titles = ["Introduction", "Objectives", "Summary", "Test Plan", "Manual", "Jira", "API", "Database", "TestNG FW", "Cucumber", "Roles", "References", "Thank You"];
+    let isSidebarOpen = false;
+
+    // --- PDF/IMAGE MODAL LOGIC ---
+    const pdfOverlay = document.getElementById('pdfOverlay');
+    const pdfContent = document.getElementById('pdfContent');
+
+    function openPdfModal(src) {
+        pdfContent.src = src;
+        pdfOverlay.classList.add('show');
+    }
+
+    function closePdfModal() {
+        pdfOverlay.classList.remove('show');
+        pdfContent.src = "";
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Enter" && pdfOverlay.classList.contains('show')) {
+            closePdfModal();
+        }
+        if (event.key === "Escape" && pdfOverlay.classList.contains('show')) {
+            closePdfModal();
+        }
+    });
+
+    // Sidebar Generation
+    titles.forEach((title, i) => {
+        const thumb = document.createElement('div');
+        thumb.className = `slide-thumb ${i === 0 ? 'active' : ''}`;
+        thumb.id = `thumb-${i}`;
+        thumb.onclick = () => scrollToSlide(i);
+        thumb.innerHTML = `<span class="thumb-num">${i + 1}</span><span class="thumb-preview">${title}</span>`;
+        sidebar.appendChild(thumb);
+    });
+
+    function scrollToSlide(index) {
+        const slide = document.getElementById(`slide${index}`);
+        if(slide) {
+            slide.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+            if(isSidebarOpen && window.innerWidth < 1000) toggleSidebar();
+        }
+    }
+
+    function nextSlide() { main.scrollBy({ left: window.innerWidth, behavior: 'smooth' }); }
+    function prevSlide() { main.scrollBy({ left: -window.innerWidth, behavior: 'smooth' }); }
+
+    function toggleSidebar() {
+        isSidebarOpen = !isSidebarOpen;
+        sidebar.classList.toggle('active', isSidebarOpen);
+    }
+
+    function updateActiveThumbnail(index) {
+        document.querySelectorAll('.slide-thumb').forEach((thumb, i) => {
+            thumb.classList.toggle('active', i === index);
+        });
+    }
+
+    // Observer Logic
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const animElements = entry.target.querySelectorAll('.anim-hidden');
+                animElements.forEach(el => {
+                    const animType = el.getAttribute('data-anim');
+                    el.classList.remove('anim-hidden');
+                    el.classList.add('animate__animated', `animate__${animType}`);
+                });
+
+                const idStr = entry.target.id.replace('slide', '');
+                if(idStr) updateActiveThumbnail(parseInt(idStr));
+            } else {
+                const animElements = entry.target.querySelectorAll('.animate__animated');
+                animElements.forEach(el => {
+                    const animType = el.getAttribute('data-anim');
+                    el.classList.remove('animate__animated', `animate__${animType}`);
+                    el.classList.add('anim-hidden');
+                });
+            }
+        });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('section').forEach(section => observer.observe(section));
+
+    // Particle Bg
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, particles = [];
+    const particleCount = 70; // Slightly increased for nicer bg
+    const mouseDist = 150;
+    let mouse = { x: null, y: null };
+
+    window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
+    window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * width; this.y = Math.random() * height;
+            this.baseX = this.x; this.baseY = this.y; this.size = Math.random() * 2 + 1;
+        }
+        update() {
+            if(mouse.x != null) {
+                let dx = mouse.x - this.x; let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx*dx + dy*dy);
+                if (distance < mouseDist) {
+                    const force = (mouseDist - distance) / mouseDist;
+                    this.x -= (dx / distance) * force * 2; this.y -= (dy / distance) * force * 2;
+                } else {
+                    if (this.x !== this.baseX) this.x -= (this.x - this.baseX) / 60;
+                    if (this.y !== this.baseY) this.y -= (this.y - this.baseY) / 60;
+                }
+            } else {
+                if (this.x !== this.baseX) this.x -= (this.x - this.baseX) / 60;
+                if (this.y !== this.baseY) this.y -= (this.y - this.baseY) / 60;
+            }
+        }
+        draw() {
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.4)'; ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+
+    function initParticles() { particles = []; resize(); for(let i=0; i<particleCount; i++) particles.push(new Particle()); }
+    function animateParticles() {
+        ctx.clearRect(0, 0, width, height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update(); particles[i].draw();
+            for (let j = i; j < particles.length; j++) {
+                let dx = particles[i].x - particles[j].x; let dy = particles[i].y - particles[j].y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 130) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rgba(56, 189, 248,' + (1 - distance/130) * 0.2 + ')';
+                    ctx.lineWidth = 1; ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animateParticles);
+    }
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+    initParticles(); animateParticles();
+    document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+</script>
+</body>
+</html>
